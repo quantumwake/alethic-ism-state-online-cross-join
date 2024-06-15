@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APP_NAME="alethic-ism-state-router"
+APP_NAME="alethic-ism-processor-state-coalescer"
 DOCKER_NAMESPACE="krasaee"
 CONDA_PACKAGE_PATH_ISM_CORE="../alethic-ism-core"
 CONDA_PACKAGE_PATH_ISM_DB="../alethic-ism-db"
