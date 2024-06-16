@@ -11,7 +11,7 @@ dependencies:
   - psycopg2
   - pyyaml
   - pydantic
-  - pydantic-core
+  - restrictedpython
   - tenacity
   - alethic-ism-core
   - alethic-ism-db
