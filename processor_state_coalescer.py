@@ -20,6 +20,8 @@ class StateCoalescerProcessor(BaseProcessor):
         self.secondary_input_state = secondary_input_state
 
     async def process_input_data_entry(self, input_query_state: dict, force: bool = False):
+
+        # merges two sets together and ensures it always takes the value that is `not` None.
         def merge_dicts(primary, secondary):
             return {
                 k:
