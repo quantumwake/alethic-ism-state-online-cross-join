@@ -67,7 +67,7 @@ class MessagingConsumerCoalescer(BaseMessagingConsumerState):
 
     async def fetch_input_output_states(self, processor_id: str):
         # fetch the processors to forward the state query to, state must be an input of the state id
-        output_states = self.storage.fetch_processor_state(
+        output_states = self.storage.fetch_processor_state_route(
             processor_id=processor_id,
             direction=ProcessorStateDirection.OUTPUT
         )
@@ -76,7 +76,7 @@ class MessagingConsumerCoalescer(BaseMessagingConsumerState):
             raise BrokenPipeError(f'no output state found for processor id: {processor_id}')
 
         # identify all the input states we need to fuse together and keep track of
-        input_states = self.storage.fetch_processor_state(
+        input_states = self.storage.fetch_processor_state_route(
             processor_id=processor_id,
             direction=ProcessorStateDirection.INPUT
         )
@@ -88,13 +88,18 @@ class MessagingConsumerCoalescer(BaseMessagingConsumerState):
 
     def filter_and_load_secondary_state_id(self, primary_state_id, input_states: List[ProcessorState]):
         # filter out the current query state entry input_state and focus only on the other input states
-        secondary_processor_states = [input_state for input_state in input_states if input_state.state_id != primary_state_id]
+        secondary_processor_states = [
+            input_state for input_state in input_states
+            if input_state.state_id != primary_state_id
+        ]
 
         # TODO this needs to be resolved
         if not secondary_processor_states or len(secondary_processor_states) > 1:
-            raise OverflowError(f'unsupported number of input states, was expecting '
-                                f'only a single input state state to be merged with current '
-                                f'input_state_id query state entry')
+            raise ValueError(OverflowError(
+                f'unsupported number of input states, was expecting '
+                f'only a single input state state to be merged with current '
+                f'input_state_id query state entry'
+            ))
 
         # load the secondary state and return
         secondary_processor_state = secondary_processor_states[0]
@@ -121,23 +126,31 @@ class MessagingConsumerCoalescer(BaseMessagingConsumerState):
 
     async def execute(self, message: dict):
         if message['type'] != 'query_state':
-            raise NotImplemented(f'unsupported message type: {type}')
+            raise ValueError(f'unsupported message type: {type}')
 
-        primary_state_id = message['input_state_id']   # the primary is defined by the query state entry(s) state id
-        processor_id = message['processor_id']         # the processor used to combine the primary and secondary source
-        provider_id = message['provider_id']           # the provider id is used to determine the logic to use
+        if 'route_id' not in message:
+            raise ValueError(f'route id is not defined on message {message}')
+
+        # fetch the route that was invoked (aka the processor state route ~ input state <func> output state)
+        route_id = message['route_id']
+        processor_state_route = storage.fetch_processor_state_route(route_id=route_id)
+        if processor_state_route and len(processor_state_route) != 1:
+            raise ValueError(f'invalid processor state route found, expected 1 route, got {processor_state_route}')
+        processor_state_route = processor_state_route[0]
+
+        primary_state_id = processor_state_route.state_id   # the prime is defined by the query state entry(s) state id
 
         # fetch processor and provider information
-        processor = self.storage.fetch_processor(processor_id=processor_id)
-        provider = self.storage.fetch_processor_provider(provider_id)
+        processor = self.storage.fetch_processor(processor_id=processor_state_route.processor_id)
+        provider = self.storage.fetch_processor_provider(processor.provider_id)
 
         # fetch the input and output states
-        input_states, output_states = await self.fetch_input_output_states(processor_id)
+        input_states, output_states = await self.fetch_input_output_states(processor.id)
         secondary_state = self.filter_and_load_secondary_state_id(primary_state_id, input_states)
 
         # fetch query state input entries
         query_states = message['query_state']
-        logging.info(f'starting processing of {len(output_states)} states on processor id {processor_id} with provider {provider_id}')
+        logging.info(f'starting processing of {len(output_states)} states on processor id {processor.id} with provider {provider.id}')
 
         # iterate all output states
         for output_processor_state in output_states:
@@ -148,7 +161,7 @@ class MessagingConsumerCoalescer(BaseMessagingConsumerState):
                 load_data=False
             )
 
-            logging.info(f'creating processor provider {processor_id} with: '
+            logging.info(f'creating processor provider {processor.id} with: '
                          f'output state id {output_processor_state.state_id} with '
                          f'current index: {output_processor_state.current_index}, '
                          f'maximum processed index: {output_processor_state.maximum_index}, '
@@ -170,14 +183,14 @@ class MessagingConsumerCoalescer(BaseMessagingConsumerState):
             # iterate each query state entry and forward it to the processor
             if isinstance(query_states, dict):
                 logging.debug(f'submitting single query state entry count: solo, '
-                              f'with processor_id: {processor_id}, '
-                              f'provider_id: {provider_id}')
+                              f'with processor_id: {processor.id}, '
+                              f'provider_id: {provider.id}')
 
                 await coalescer.execute(input_query_state=query_states)
             elif isinstance(query_states, list):
                 logging.debug(f'submitting batch query state entries count: {len(query_states)}, '
-                              f'with processor_id: {processor_id}, '
-                              f'provider_id: {provider_id}')
+                              f'with processor_id: {processor.id}, '
+                              f'provider_id: {provider.id}')
 
                 # iterate each individual entry and submit
                 # TODO modify to submit as a batch?? although this consumer should be handling 1 request

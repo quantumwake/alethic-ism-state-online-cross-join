@@ -31,22 +31,30 @@ class StateCoalescerProcessor(BaseProcessor):
 
         secondary_count = self.secondary_input_state.count
 
-        # otherwise it will default to the only parameter it knows of named 'query' within the input states
-        primary_query_state = extract_values_from_query_state_by_key_definition(
-            key_definitions=self.config.query_state_inheritance,
-            query_state=input_query_state)
+        # if the inheritance is defined, the use it, otherwise inherit everything from the primary state
+        if self.config.query_state_inheritance:
+            primary_query_state = extract_values_from_query_state_by_key_definition(
+                key_definitions=self.config.query_state_inheritance,
+                query_state=input_query_state)
+        else:
+            primary_query_state = input_query_state
 
         output_query_states = []
         for secondary_index in range(secondary_count):
             secondary_query_state = self.secondary_input_state.build_query_state_from_row_data(secondary_index)
-            secondary_query_state = extract_values_from_query_state_by_key_definition(
-                key_definitions=self.config.query_state_inheritance,
-                query_state=secondary_query_state
-            )
 
-            joined_query_state = merge_dicts(primary_query_state, secondary_query_state)    # where input_query_state is primary_query_state
+            # if the inheritance is defined, then use it, otherwise inherit everything from the secondary state
+            if self.config.query_state_inheritance:
+                secondary_query_state = extract_values_from_query_state_by_key_definition(
+                    key_definitions=self.config.query_state_inheritance,
+                    query_state=secondary_query_state
+                )
+
+            # join the primary and secondary states into a single state entry
+            joined_query_state = merge_dicts(primary_query_state, secondary_query_state)
             output_query_states.append(self.output_state.apply_query_state(query_state=joined_query_state))
 
+        # apply the newly created state
         self.apply_states(output_query_states)
 
     def apply_states(self, query_states: [dict]):
