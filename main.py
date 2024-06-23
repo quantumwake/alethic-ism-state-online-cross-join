@@ -175,6 +175,7 @@ class MessagingConsumerCoalescer(BaseMessagingConsumerState):
                          f'count: {output_processor_state.count}')
 
             # create (or fetch cached state) processor handling this state output
+            # TODO amalgamate BUT state input is different?
             coalescer = StateCoalescerProcessor(
                 output_state=output_state,
                 secondary_input_state=secondary_state,
@@ -182,9 +183,8 @@ class MessagingConsumerCoalescer(BaseMessagingConsumerState):
                 provider=provider,
                 processor=processor,
                 output_processor_state=output_processor_state,
+                state_propagation_provider=state_propagation_provider,
                 monitor_route=monitor_route,
-                sync_store_route=sync_store_route,
-                state_router_route=state_router_route
             )
 
             # iterate each query state entry and forward it to the processor
