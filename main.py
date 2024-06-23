@@ -61,8 +61,6 @@ router = Router(
 
 # find the monitor route for telemetry updates
 monitor_route = router.find_router("processor/monitor")
-state_router_route = router.find_router("processor/monitor")
-sync_store_route = router.find_router('state/sync/store')
 
 # state_router_route = router.find_router("processor/monitor")
 state_propagation_provider = StatePropagationProviderDistributor(
