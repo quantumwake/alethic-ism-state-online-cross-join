@@ -6,6 +6,8 @@ import dotenv
 from core.base_message_consumer_state import BaseMessagingConsumerState
 from core.base_message_router import Router
 from core.base_model import ProcessorStateDirection, ProcessorState, Processor, ProcessorProvider
+from core.base_processor import StatePropagationProviderDistributor, StatePropagationProviderRouterStateSyncStore, \
+    StatePropagationProviderRouterStateRouter
 from core.processor_state import State
 from core.pulsar_message_producer_provider import PulsarMessagingProducerProvider
 from core.pulsar_messaging_provider import PulsarMessagingConsumerProvider
@@ -61,6 +63,14 @@ router = Router(
 monitor_route = router.find_router("processor/monitor")
 state_router_route = router.find_router("processor/monitor")
 sync_store_route = router.find_router('state/sync/store')
+
+# state_router_route = router.find_router("processor/monitor")
+state_propagation_provider = StatePropagationProviderDistributor(
+    propagators=[
+        StatePropagationProviderRouterStateSyncStore(route=router.find_router('state/sync/store')),
+        StatePropagationProviderRouterStateRouter(route=router.find_router('state/router'))
+    ]
+)
 
 
 class MessagingConsumerCoalescer(BaseMessagingConsumerState):
@@ -118,8 +128,7 @@ class MessagingConsumerCoalescer(BaseMessagingConsumerState):
             processor=processor,
             output_processor_state=output_processor_state,
             monitor_route=self.monitor_route,
-            sync_store_route=sync_store_route,
-            state_router_route=state_router_route
+            state_propagation_provider=state_propagation_provider
         )
 
         return processor
