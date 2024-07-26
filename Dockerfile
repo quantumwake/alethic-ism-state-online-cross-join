@@ -50,9 +50,6 @@ RUN conda install -y conda-build
 RUN conda config --add channels conda-forge
 RUN conda config --set channel_priority strict
 
-## Install Conda packages
-RUN conda install -y pulsar-client
-
 # display all packages installed
 RUN conda list
 

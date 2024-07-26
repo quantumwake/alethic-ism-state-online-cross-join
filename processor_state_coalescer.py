@@ -56,14 +56,11 @@ class StateCoalescerProcessor(BaseProcessor):
             joined_query_state = merge_dicts(primary_query_state, secondary_query_state)
             output_query_states.append(self.output_state.apply_query_state(query_state=joined_query_state))
 
+        return await self.finalize_result(
+            input_query_state=input_query_state,
+            result=output_query_states,
+            additional_query_state={}
+        )
+
         # apply the newly created state
-        self.apply_states(output_query_states)
-
-    def apply_states(self, query_states: [dict]):
-        route_message = {
-            "route_id": self.output_processor_state.id,
-            "type": "query_state_list",
-            "query_state_list": query_states
-        }
-
-        self.sync_store_route.send_message(json.dumps(route_message))
+        # self(output_query_states)

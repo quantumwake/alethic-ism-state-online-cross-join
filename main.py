@@ -1,16 +1,16 @@
+import asyncio
 import os
 from typing import List
 
 import dotenv
 
-from core.base_message_consumer_state import BaseMessagingConsumerState
-from core.base_message_router import Router
 from core.base_model import ProcessorStateDirection, ProcessorState, Processor, ProcessorProvider
 from core.base_processor import StatePropagationProviderDistributor, StatePropagationProviderRouterStateSyncStore, \
     StatePropagationProviderRouterStateRouter
+from core.messaging.base_message_consumer_processor import BaseMessageConsumerProcessor
+from core.messaging.base_message_router import Router
+from core.messaging.nats_message_provider import NATSMessageProvider
 from core.processor_state import State
-from core.pulsar_message_producer_provider import PulsarMessagingProducerProvider
-from core.pulsar_messaging_provider import PulsarMessagingConsumerProvider
 from db.processor_state_db_storage import PostgresDatabaseStorage
 from logger import logging
 from processor_state_coalescer import StateCoalescerProcessor
@@ -18,12 +18,6 @@ from processor_state_coalescer import StateCoalescerProcessor
 dotenv.load_dotenv()
 
 logging.info('starting up pulsar consumer for state coalescer.')
-
-# pulsar/kafka related
-MSG_URL = os.environ.get("MSG_URL", "pulsar://localhost:6650")
-MSG_TOPIC = os.environ.get("MSG_TOPIC", "ism_state_coalescer")
-MSG_MANAGE_TOPIC = os.environ.get("MSG_MANAGE_TOPIC", "ism_state_coalescer_manage")
-MSG_TOPIC_SUBSCRIPTION = os.environ.get("MSG_TOPIC_SUBSCRIPTION", "ism_state_coalescer_subscription")
 
 # database related
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres1@localhost:5432/postgres")
@@ -44,34 +38,29 @@ storage = PostgresDatabaseStorage(
     incremental=True
 )
 
-messaging_provider = PulsarMessagingConsumerProvider(
-    message_url=MSG_URL,
-    message_topic=MSG_TOPIC,
-    message_topic_subscription=MSG_TOPIC_SUBSCRIPTION,
-    management_topic=MSG_MANAGE_TOPIC
-)
-
-
 # routing the persistence of individual state entries to the state sync store topic
-pulsar_route_provider = PulsarMessagingProducerProvider()
+message_provider = NATSMessageProvider()
 router = Router(
-    provider=pulsar_route_provider,
+    provider=message_provider,
     yaml_file=ROUTING_FILE
 )
 
 # find the monitor route for telemetry updates
-monitor_route = router.find_router("processor/monitor")
+monitor_route = router.find_route("processor/monitor")
+state_sync_route = router.find_route("processor/state/sync")
+state_router_route = router.find_route('processor/state/router')
+state_coalescer_route_subscriber = router.find_route_by_subject("processor.transform.coalescer")
 
 # state_router_route = router.find_router("processor/monitor")
 state_propagation_provider = StatePropagationProviderDistributor(
     propagators=[
-        StatePropagationProviderRouterStateSyncStore(route=router.find_router('state/sync/store')),
-        StatePropagationProviderRouterStateRouter(route=router.find_router('state/router'))
+        StatePropagationProviderRouterStateSyncStore(route=state_sync_route),
+        StatePropagationProviderRouterStateRouter(route=state_router_route)
     ]
 )
 
 
-class MessagingConsumerCoalescer(BaseMessagingConsumerState):
+class MessagingConsumerCoalescer(BaseMessageConsumerProcessor):
 
     async def fetch_input_output_states(self, processor_id: str):
         # fetch the processors to forward the state query to, state must be an input of the state id
@@ -210,11 +199,10 @@ class MessagingConsumerCoalescer(BaseMessagingConsumerState):
 
 if __name__ == '__main__':
     consumer = MessagingConsumerCoalescer(
-        name="MessagingConsumerPython",
         storage=storage,
-        messaging_provider=messaging_provider,
+        route=state_coalescer_route_subscriber,
         monitor_route=monitor_route
     )
 
     consumer.setup_shutdown_signal()
-    consumer.start_topic_consumer()
+    asyncio.get_event_loop().run_until_complete(consumer.start_consumer())

@@ -14,9 +14,9 @@ spec:
         app: alethic-ism-processor-state-coalescer
     spec:
       volumes:
-        - name: alethic-ism-processor-state-coalescer-secret-config-volume
+        - name: alethic-ism-routes-secret-volume
           secret:
-            secretName: alethic-ism-processor-state-coalescer-secret
+            secretName: alethic-ism-routes-secret
             items:
               - key: .routing.yaml
                 path: .routing.yaml
@@ -25,35 +25,25 @@ spec:
         image: <IMAGE>
         imagePullPolicy: Always
         volumeMounts:
-          - name: alethic-ism-processor-state-coalescer-secret-config-volume
+          - name: alethic-ism-routes-secret-volume
             mountPath: /app/repo/.routing.yaml
             subPath: .routing.yaml
             readOnly: true
         env:
-          # Consumer Configuration for Pulsar
-          - name: MSG_URL
+          # Log Level
+          - name: LOG_LEVEL
             valueFrom:
               secretKeyRef:
                 name: alethic-ism-processor-state-coalescer-secret
-                key: MSG_URL
+                key: LOG_LEVEL
 
-          - name: MSG_TOPIC
+          # Consumer Configuration
+          - name: ROUTING_FILE
             valueFrom:
               secretKeyRef:
                 name: alethic-ism-processor-state-coalescer-secret
-                key: MSG_TOPIC
+                key: ROUTING_FILE
 
-          - name: MSG_MANAGE_TOPIC
-            valueFrom:
-              secretKeyRef:
-                name: alethic-ism-processor-state-coalescer-secret
-                key: MSG_MANAGE_TOPIC
-
-          - name: MSG_TOPIC_SUBSCRIPTION
-            valueFrom:
-              secretKeyRef:
-                name: alethic-ism-processor-state-coalescer-secret
-                key: MSG_TOPIC_SUBSCRIPTION
 
           # Database connection details
           - name: DATABASE_URL
