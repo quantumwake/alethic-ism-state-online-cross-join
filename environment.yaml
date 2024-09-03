@@ -12,7 +12,8 @@ dependencies:
   - pydantic
   - tenacity
   - nats-py
-#  - pulsar-client
+  - jinja2
+  - redis-py
   - restrictedpython
   - alethic-ism-core
   - alethic-ism-db

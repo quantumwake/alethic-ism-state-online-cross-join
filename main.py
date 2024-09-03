@@ -56,7 +56,7 @@ state_coalescer_route_subscriber = router.find_route_by_subject("processor.trans
 state_propagation_provider = StatePropagationProviderDistributor(
     propagators=[
         StatePropagationProviderRouterStateSyncStore(route=state_sync_route),
-        StatePropagationProviderRouterStateRouter(route=state_router_route)
+        StatePropagationProviderRouterStateRouter(route=state_router_route, storage=storage)
     ]
 )
 
