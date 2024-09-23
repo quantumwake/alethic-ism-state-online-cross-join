@@ -12,7 +12,7 @@ dependencies:
   - pydantic
   - tenacity
   - nats-py
-  - jinja2
+  - mako
   - redis-py
   - restrictedpython
   - alethic-ism-core
