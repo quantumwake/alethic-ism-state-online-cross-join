@@ -50,7 +50,7 @@ router = Router(
 monitor_route = router.find_route("processor/monitor")
 state_sync_route = router.find_route("processor/state/sync")
 state_router_route = router.find_route('processor/state/router')
-state_coalescer_route_subscriber = router.find_route_by_subject("processor.transform.coalescer")
+state_coalescer_route_subscriber = router.find_route_by_subject("processor.transform.state.online.cross.join")
 
 # state_router_route = router.find_router("processor/monitor")
 state_propagation_provider = StatePropagationProviderDistributor(
