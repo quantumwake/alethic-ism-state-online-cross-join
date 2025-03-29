@@ -4,15 +4,15 @@ import random
 from typing import List
 
 import dotenv
+from ismcore.messaging.base_message_consumer_processor import BaseMessageConsumerProcessor
+from ismcore.messaging.base_message_router import Router
+from ismcore.messaging.nats_message_provider import NATSMessageProvider
+from ismcore.model.base_model import ProcessorStateDirection, ProcessorState, Processor, ProcessorProvider
+from ismcore.model.processor_state import State
+from ismcore.processor.base_processor import StatePropagationProviderDistributor, \
+    StatePropagationProviderRouterStateSyncStore, StatePropagationProviderRouterStateRouter
+from ismdb.postgres_storage_class import PostgresDatabaseStorage
 
-from core.base_model import ProcessorStateDirection, ProcessorState, Processor, ProcessorProvider
-from core.base_processor import StatePropagationProviderDistributor, StatePropagationProviderRouterStateSyncStore, \
-    StatePropagationProviderRouterStateRouter
-from core.messaging.base_message_consumer_processor import BaseMessageConsumerProcessor
-from core.messaging.base_message_router import Router
-from core.messaging.nats_message_provider import NATSMessageProvider
-from core.processor_state import State
-from db.processor_state_db_storage import PostgresDatabaseStorage
 from logger import logging
 from processor_state_coalescer import StateCoalescerProcessor
 

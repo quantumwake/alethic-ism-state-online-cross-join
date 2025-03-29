@@ -2,6 +2,7 @@
 .idea/*
 logs/*.log
 .env
+.venv
 *.swp
 __pycache__
 .DS_Store

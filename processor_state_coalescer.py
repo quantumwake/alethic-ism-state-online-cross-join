@@ -1,7 +1,7 @@
-import json
 import dotenv
-from core.base_processor import BaseProcessor
-from core.processor_state import State, extract_values_from_query_state_by_key_definition
+from ismcore.model.processor_state import extract_values_from_query_state_by_key_definition, State
+from ismcore.processor.base_processor import BaseProcessor
+
 from logger import log
 
 dotenv.load_dotenv()
