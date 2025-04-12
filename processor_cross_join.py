@@ -8,7 +8,7 @@ dotenv.load_dotenv()
 logging = log.getLogger(__name__)
 
 
-class StateCoalescerProcessor(BaseProcessor):
+class OnlineCrossJoinProcessor(BaseProcessor):
 
     def __init__(self,
                  output_state: State,

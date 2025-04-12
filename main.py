@@ -14,22 +14,13 @@ from ismcore.processor.base_processor import StatePropagationProviderDistributor
 from ismdb.postgres_storage_class import PostgresDatabaseStorage
 
 from logger import logging
-from processor_state_coalescer import StateCoalescerProcessor
+from processor_cross_join import OnlineCrossJoinProcessor
 
 dotenv.load_dotenv()
 
-logging.info('starting up pulsar consumer for state coalescer.')
+logging.info('starting up pulsar consumer for state cross_joiner.')
 
-# database related
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres1@localhost:5432/postgres")
-
-# Message Routing File (
-#   The responsibility of this state sync store is to take inputs and
-#   store them into a consistent state storage class. After, the intent is
-#   to automatically route the newly synced data to the next state processing unit
-#   route them to the appropriate destination, as defined by the
-#   route selector
-# )
 ROUTING_FILE = os.environ.get("ROUTING_FILE", '.routing.yaml')
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
@@ -50,7 +41,7 @@ router = Router(
 monitor_route = router.find_route("processor/monitor")
 state_sync_route = router.find_route("processor/state/sync")
 state_router_route = router.find_route('processor/state/router')
-state_coalescer_route_subscriber = router.find_route_by_subject("processor.transform.state.online.cross.join")
+state_cross_join_subscriber = router.find_route_by_subject("processor.transform.state.online.cross.join")
 
 # state_router_route = router.find_router("processor/monitor")
 state_propagation_provider = StatePropagationProviderDistributor(
@@ -61,7 +52,7 @@ state_propagation_provider = StatePropagationProviderDistributor(
 )
 
 
-class MessagingConsumerCoalescer(BaseMessageConsumerProcessor):
+class OnlineCrossJoinConsumer(BaseMessageConsumerProcessor):
 
     async def fetch_input_output_states(self, processor_id: str):
         # fetch the processors to forward the state query to, state must be an input of the state id
@@ -109,7 +100,7 @@ class MessagingConsumerCoalescer(BaseMessageConsumerProcessor):
                          output_processor_state: ProcessorState,
                          output_state: State):
 
-        processor = StateCoalescerProcessor(
+        processor = OnlineCrossJoinProcessor(
             state_machine_storage=storage,
             output_state=output_state,
             provider=provider,
@@ -166,7 +157,7 @@ class MessagingConsumerCoalescer(BaseMessageConsumerProcessor):
 
             # create (or fetch cached state) processor handling this state output
             # TODO amalgamate BUT state input is different?
-            coalescer = StateCoalescerProcessor(
+            cross_joiner = OnlineCrossJoinProcessor(
                 output_state=output_state,
                 secondary_input_state=secondary_state,
                 state_machine_storage=self.storage,
@@ -183,7 +174,7 @@ class MessagingConsumerCoalescer(BaseMessageConsumerProcessor):
                               f'with processor_id: {processor.id}, '
                               f'provider_id: {provider.id}')
 
-                await coalescer.execute(input_query_state=query_states)
+                await cross_joiner.execute(input_query_state=query_states)
             elif isinstance(query_states, list):
                 logging.debug(f'submitting batch query state entries count: {len(query_states)}, '
                               f'with processor_id: {processor.id}, '
@@ -192,16 +183,16 @@ class MessagingConsumerCoalescer(BaseMessageConsumerProcessor):
                 # iterate each individual entry and submit
                 # TODO modify to submit as a batch?? although this consumer should be handling 1 request
                 for query_state_entry in query_states:
-                    await coalescer.execute(input_query_state=query_state_entry)
+                    await cross_joiner.execute(input_query_state=query_state_entry)
             else:
                 raise NotImplemented('unsupported query state entry, it must be a Dict or a List[Dict] where Dict is a '
                                      'key value pair of values, defining a single row and a column per key entry')
 
 
 if __name__ == '__main__':
-    consumer = MessagingConsumerCoalescer(
+    consumer = OnlineCrossJoinConsumer(
         storage=storage,
-        route=state_coalescer_route_subscriber,
+        route=state_cross_join_subscriber,
         monitor_route=monitor_route
     )
 
