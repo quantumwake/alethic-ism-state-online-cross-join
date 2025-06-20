@@ -25,7 +25,7 @@ jobs:
         uses: quantumwake/alethic-ism-github-actions@main
         with:
           # Required inputs
-          image-name: 'krasaee/alethic-ism-state-online-cross-joing'
+          image-name: 'krasaee/alethic-ism-state-online-cross-join'
           registry-username: ${{ vars.DOCKERHUB_USERNAME }}
           registry-token: ${{ secrets.DOCKERHUB_TOKEN }}
           registry: 'docker.io'
@@ -33,7 +33,7 @@ jobs:
           # Kubernetes deployment settings
           k8s-config: 'doctl kubernetes cluster kubeconfig save --expiry-seconds 600 qwake-k8s-cluster'
           k8s-namespace: 'alethic'
-          k8s-deployment: 'alethic-ism-state-online-cross-joing-deployment'
+          k8s-deployment: 'alethic-ism-state-online-cross-join-deployment'
           deployment-file: 'k8s/deployment.yaml'
 
           create-github-release: 'true'
