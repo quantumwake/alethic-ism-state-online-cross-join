@@ -22,6 +22,8 @@ class OnlineCrossJoinProcessor(BaseProcessor):
         self.secondary_input_state = secondary_input_state
 
     # async def process_input_data_entry(self, input_query_state: dict, force: bool = False):
+    async def _execute(self, input_query_state: List[dict] = None, force: bool = False):
+        pass
 
     async def process_input_data(self, input_data: dict | List[dict], force: bool = False):
         # merges two sets together and ensures it always takes the value that is `not` None.
@@ -60,7 +62,7 @@ class OnlineCrossJoinProcessor(BaseProcessor):
             output_query_states.append(self.output_state.apply_query_state(query_state=joined_query_state))
 
         return await self.finalize_result(
-            input_query_state=input_query_state,
+            input_data=input_data,
             result=output_query_states,
             additional_query_state={}
         )

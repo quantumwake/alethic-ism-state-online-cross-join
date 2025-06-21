@@ -174,7 +174,7 @@ class OnlineCrossJoinConsumer(BaseMessageConsumerProcessor):
                               f'with processor_id: {processor.id}, '
                               f'provider_id: {provider.id}')
 
-                await cross_joiner.execute(input_query_state=query_states)
+                await cross_joiner.execute_entry(input_query_state=query_states)
             elif isinstance(query_states, list):
                 logging.debug(f'submitting batch query state entries count: {len(query_states)}, '
                               f'with processor_id: {processor.id}, '
@@ -183,7 +183,7 @@ class OnlineCrossJoinConsumer(BaseMessageConsumerProcessor):
                 # iterate each individual entry and submit
                 # TODO modify to submit as a batch?? although this consumer should be handling 1 request
                 for query_state_entry in query_states:
-                    await cross_joiner.execute(input_query_state=query_state_entry)
+                    await cross_joiner.execute_set(input_query_state=query_state_entry)
             else:
                 raise NotImplemented('unsupported query state entry, it must be a Dict or a List[Dict] where Dict is a '
                                      'key value pair of values, defining a single row and a column per key entry')
